@@ -1,0 +1,41 @@
+import cv2
+import numpy as np
+
+labels = ["background", "aeroplane", "bicycle", "bird", 
+"boat","bottle", "bus", "car", "cat", "chair", "cow", 
+"diningtable","dog", "horse", "motorbike", "person", "pottedplant", 
+"sheep","sofa", "train", "tvmonitor"]
+
+colors = np.random.uniform(0, 255, size=(len(labels), 3))
+
+nn = cv2.dnn.readNetFromCaffe('SSD_MobileNet_prototxt.txt', 'SSD_MobileNet.caffemodel')
+
+img = cv2.imread('image22.jpg')
+(h, w) = img.shape[:2]
+
+blob = cv2.dnn.blobFromImage(cv2.resize(img, (300, 300)), 
+    0.007843, (300, 300), 127.5)
+
+nn.setInput(blob)
+detections = nn.forward()
+
+#Loop over the detections
+for i in np.arange(0, detections.shape[2]):
+
+    confidence = detections[0, 0, i, 2]
+
+    #Filtering out weak predictions
+    if confidence > 0.6:      
+        idx = int(detections[0, 0, i, 1])
+        box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+        (startX, startY, endX, endY) = box.astype("int")
+
+        label = "{}: {:.2f}%".format(labels[idx], confidence * 100)
+        cv2.rectangle(img, (startX, startY), (endX, endY), colors[idx], 2)
+
+        y = startY - 15 if startY - 15 > 15 else startY + 15
+        cv2.putText(img, label, (startX, y),cv2.FONT_HERSHEY_SIMPLEX, 0.5, colors[idx], 2)
+
+cv2.imshow("Frame", img)
+cv2.waitKey()
+cv2.destroyAllWindows()
